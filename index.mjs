@@ -21,8 +21,7 @@ export default class IdleCheck extends Plugin {
             const data = await this.connection.store.fetchInfo('clientinfo', 'clid', client.clid);
             if (
                 !this.idleTimers[client.clid] &&
-                data.client_idle_time > this.config.IDLE_TIME / 2 &&
-                client.clid != this.config.IDLE_CHANNEL
+                client.cid != this.config.IDLE_CHANNEL
             ) {
                 this.idleTimers[client.cid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - data.client_idle_time, 0), client.clid);
             } else if (this.idleTimers[client.clid]) {
@@ -36,14 +35,14 @@ export default class IdleCheck extends Plugin {
                 this.clearIdleTimer(param.clid);
             },
             notifycliententerview: (param) => {
-                clearTimeout(this.idleTimers[clid]);
+                clearTimeout(this.idleTimers[param.clid]);
                 this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
             }
         });
         this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
             notifyclientmoved: (param) => {
                 if (param.ctid != this.config.IDLE_CHANNEL) {
-                    clearTimeout(this.idleTimers[clid]);
+                    clearTimeout(this.idleTimers[param.clid]);
                     this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
                 } else {
                     this.clearIdleTimer(param.clid);
@@ -61,7 +60,7 @@ export default class IdleCheck extends Plugin {
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
                 if (client.cid != this.config.IDLE_CHANNEL) {
-                    this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL}, {noOutput: true});
+                    this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL});
                 }
                 this.connection.store.forceInfoUpdate('clientinfo', clid, {client_idle_time: 0});
                 this.connection.store.forceListUpdate('clientlist', 'clid', clid, {cid: this.config.IDLE_CHANNEL});
