@@ -38,7 +38,7 @@ export default class IdleCheck extends Plugin {
                 clearTimeout(this.idleTimers[param.clid]);
                 this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
             }
-        });
+        }, import.meta.url);
         this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
             notifyclientmoved: (param) => {
                 if (param.ctid != this.config.IDLE_CHANNEL) {
@@ -48,7 +48,7 @@ export default class IdleCheck extends Plugin {
                     this.clearIdleTimer(param.clid);
                 }
             }
-        });
+        }, import.meta.url);
     }
     clearIdleTimer(clid) {
         clearTimeout(this.idleTimers[clid]);
@@ -77,8 +77,14 @@ export default class IdleCheck extends Plugin {
     }
     unload() {
         console.log("IdleCheck - Unloading...");
+        this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
+        this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
+
         for (let clid of Object.keys(this.idleTimers)) {
             this.clearIdleTimer(clid);
         }
+    }
+    disconnected() {
+        this.unload();
     }
 }
