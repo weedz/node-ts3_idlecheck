@@ -32,7 +32,7 @@ class IdleCheck {
                     this.clearIdleTimer(client.clid);
                 }
             }
-            this.checkIdleTimeout = setTimeout(this.checkIdleTimes, 2000);
+            this.checkIdleTimeout = setTimeout(this.checkIdleTimes, 1000);
         }, 2000);
     }
     clearIdleTimer(clid) {
