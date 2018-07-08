@@ -42,8 +42,8 @@ export default class IdleCheck extends Plugin {
         clearTimeout(this.idleTimers[clid]);
         delete this.idleTimers[clid];
     }
-    async moveClient(clid) {
-        const client = await this.connection.store.fetchInfo('clientinfo', 'clid', clid).then(data => {
+    moveClient(clid) {
+        this.connection.store.fetchInfo('clientinfo', 'clid', clid).then(data => {
             if (data.client_idle_time > this.config.IDLE_TIME) {
                 this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL}, {noOutput: true});
                 this.connection.store.forceInfoUpdate('clientinfo', clid, {client_idle_time: 0});
