@@ -12,45 +12,69 @@ export default class IdleCheck extends Plugin {
         super(defaultConfig);
         this.idleTimers = {};
         this.moveClient = this.moveClient.bind(this);
-        this.checkIdleTimes = this.checkIdleTimes.bind(this);
-        this.checkIdleTimeout;
     }
     async setup() {
         await this.loadConfig((path.dirname(import.meta.url) + '/config.json'));
+        this.registerEvents();
+        const clientList = await this.connection.store.fetchList('clientlist');
+        for (let client of clientList) {
+            const data = await this.connection.store.fetchInfo('clientinfo', 'clid', client.clid);
+            if (
+                !this.idleTimers[client.clid] &&
+                data.client_idle_time > this.config.IDLE_TIME / 2 &&
+                client.clid != this.config.IDLE_CHANNEL
+            ) {
+                this.idleTimers[client.cid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - data.client_idle_time, 0), client.clid);
+            } else if (this.idleTimers[client.clid]) {
+                this.clearIdleTimer(client.clid);
+            }
+        }
+    }
+    registerEvents() {
         this.connection.registerEvent('server', undefined, {
             notifyclientleftview: (param) => {
                 this.clearIdleTimer(param.clid);
+            },
+            notifycliententerview: (param) => {
+                clearTimeout(this.idleTimers[clid]);
+                this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
             }
         });
-        this.checkIdleTimes();
-    }
-    checkIdleTimes() {
-        this.checkIdleTimeout = setTimeout( async ()  => {
-            const clientList = await this.connection.store.fetchList('clientlist');
-            for (let client of clientList) {
-                const data = await this.connection.store.fetchInfo('clientinfo', 'clid', client.clid)
-                if (!this.idleTimers[client.clid] && data.client_idle_time > this.config.IDLE_TIME / 2 && client.cid != this.config.IDLE_CHANNEL) {
-                    this.idleTimers[client.clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - data.client_idle_time, 0), client.clid);
-                } else if (this.idleTimers[client.clid]) {
-                    this.clearIdleTimer(client.clid);
+        this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
+            notifyclientleftview: (param) => {
+                clearTimeout(this.idleTimers[clid]);
+                this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
+            },
+            notifyclientmoved: (param) => {
+                if (param.ctid != this.config.IDLE_CHANNEL) {
+                    clearTimeout(this.idleTimers[clid]);
+                    this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
+                } else {
+                    this.clearIdleTimer(param.clid);
                 }
             }
-            this.checkIdleTimeout = setTimeout(this.checkIdleTimes, 1000);
-        }, 2000);
+        });
     }
     clearIdleTimer(clid) {
         clearTimeout(this.idleTimers[clid]);
         delete this.idleTimers[clid];
     }
     moveClient(clid) {
-        this.connection.store.fetchInfo('clientinfo', 'clid', clid).then(data => {
-            if (data.client_idle_time > this.config.IDLE_TIME) {
-                this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL}, {noOutput: true});
+        this.connection.store.fetchInfo('clientinfo', 'clid', clid).then(client => {
+            if (
+                client.client_idle_time > this.config.IDLE_TIME
+            ) {
+                if (client.cid != this.config.IDLE_CHANNEL) {
+                    this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL}, {noOutput: true});
+                }
                 this.connection.store.forceInfoUpdate('clientinfo', clid, {client_idle_time: 0});
                 this.connection.store.forceListUpdate('clientlist', 'clid', clid, {cid: this.config.IDLE_CHANNEL});
             } else if (this.idleTimers[clid]) {
-                this.clearIdleTimer(clid);
+                clearTimeout(this.idleTimers[clid]);
+                this.idleTimers[client.clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - client.client_idle_time, 0), clid);
             }
+        }).catch(err => {
+            this.clearIdleTimer(clid);
         });
     }
     reload() {
@@ -58,7 +82,6 @@ export default class IdleCheck extends Plugin {
     }
     unload() {
         console.log("IdleCheck - Unloading...");
-        clearTimeout(this.checkIdleTimeout);
         for (let clid of Object.keys(this.idleTimers)) {
             this.clearIdleTimer(clid);
         }
