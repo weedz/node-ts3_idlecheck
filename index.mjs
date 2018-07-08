@@ -41,10 +41,6 @@ export default class IdleCheck extends Plugin {
             }
         });
         this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
-            notifyclientleftview: (param) => {
-                clearTimeout(this.idleTimers[clid]);
-                this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
-            },
             notifyclientmoved: (param) => {
                 if (param.ctid != this.config.IDLE_CHANNEL) {
                     clearTimeout(this.idleTimers[clid]);
