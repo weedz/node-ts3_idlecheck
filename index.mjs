@@ -16,7 +16,7 @@ export default class IdleCheck extends Plugin {
     async setup() {
         await this.loadConfig((path.dirname(import.meta.url) + '/config.json'));
         this.registerEvents();
-        const clientList = await this.connection.store.fetchList('clientlist');
+        const clientList = await this.connection.store.fetchList('clientlist', true);
         for (let client of clientList) {
             const data = await this.connection.store.fetchInfo('clientinfo', 'clid', client.clid);
             if (
@@ -55,7 +55,7 @@ export default class IdleCheck extends Plugin {
         delete this.idleTimers[clid];
     }
     moveClient(clid) {
-        this.connection.store.fetchInfo('clientinfo', 'clid', clid).then(client => {
+        this.connection.store.fetchInfo('clientinfo', 'clid', clid, true).then(client => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
