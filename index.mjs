@@ -77,8 +77,10 @@ export default class IdleCheck extends Plugin {
     }
     unload() {
         console.log("IdleCheck - Unloading...");
-        this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
-        this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
+        if (this.connection) {
+            this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
+            this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
+        }
 
         for (let clid of Object.keys(this.idleTimers)) {
             this.clearIdleTimer(clid);
