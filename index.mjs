@@ -13,7 +13,7 @@ export default class IdleCheck extends Plugin {
         this.idleTimers = {};
         this.moveClient = this.moveClient.bind(this);
     }
-    async setup() {
+    async init() {
         await this.loadConfig((path.dirname(import.meta.url) + '/config.json'));
         this.registerEvents();
         const clientList = await this.connection.store.fetchList('clientlist', true);
