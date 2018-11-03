@@ -1,5 +1,6 @@
 import path from 'path';
 import Plugin from '../../lib/Plugin'
+import Log from '../../lib/Log.mjs';
 
 const defaultConfig = {
     "IDLE_TIME": 900000,
@@ -73,10 +74,10 @@ export default class IdleCheck extends Plugin {
         });
     }
     reload() {
-        console.log("IdleCheck - Already loaded!");
+        Log("IdleCheck - Already loaded!");
     }
     unload() {
-        console.log("IdleCheck - Unloading...");
+        Log("IdleCheck - Unloading...");
         if (this.connection) {
             this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
             this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
