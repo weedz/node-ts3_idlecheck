@@ -24,7 +24,9 @@ export default class IdleCheck extends Plugin {
                 !this.idleTimers[client.clid] &&
                 client.cid != this.config.IDLE_CHANNEL
             ) {
-                this.idleTimers[client.cid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - data.client_idle_time, 0), client.clid);
+                const timeRemaining = Math.max(this.config.IDLE_TIME - data.client_idle_time, 0);
+                Log(`Client: ${client.clid}, time: ${timeRemaining}`, this.constructor.name, 5);
+                this.idleTimers[client.cid] = setTimeout(this.moveClient, timeRemaining, client.clid);
             } else if (this.idleTimers[client.clid]) {
                 this.clearIdleTimer(client.clid);
             }
@@ -56,6 +58,7 @@ export default class IdleCheck extends Plugin {
         delete this.idleTimers[clid];
     }
     moveClient(clid) {
+        Log(`Moving client ${clid} to channel ${this.config.IDLE_CHANNEL}`, this.constructor.name, 4);
         this.connection.store.fetchInfo('clientinfo', 'clid', clid, true).then(client => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
@@ -74,10 +77,10 @@ export default class IdleCheck extends Plugin {
         });
     }
     reload() {
-        Log("IdleCheck - Already loaded!");
+        Log("IdleCheck - Already loaded!", this.constructor.name, 4);
     }
     unload() {
-        Log("IdleCheck - Unloading...");
+        Log("IdleCheck - Unloading...", this.constructor.name);
         if (this.connection) {
             this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
             this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
