@@ -26,7 +26,7 @@ export default class IdleCheck extends Plugin {
             ) {
                 const timeRemaining = Math.max(this.config.IDLE_TIME - data.client_idle_time, 0);
                 Log(`Client: ${client.clid}, time: ${timeRemaining}`, this.constructor.name, 5);
-                this.idleTimers[client.cid] = setTimeout(this.moveClient, timeRemaining, client.clid);
+                this.idleTimers[client.clid] = setTimeout(this.moveClient, timeRemaining, client.clid);
             } else if (this.idleTimers[client.clid]) {
                 this.clearIdleTimer(client.clid);
             }
@@ -44,6 +44,7 @@ export default class IdleCheck extends Plugin {
         }, import.meta.url);
         this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
             notifyclientmoved: (param) => {
+                Log(`Client ${param.clid} moved to channel ${param.ctid}`, this.constructor.name, 4);
                 if (param.ctid != this.config.IDLE_CHANNEL) {
                     clearTimeout(this.idleTimers[param.clid]);
                     this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
@@ -69,6 +70,7 @@ export default class IdleCheck extends Plugin {
                 this.connection.store.forceInfoUpdate('clientinfo', clid, {client_idle_time: 0});
                 this.connection.store.forceListUpdate('clientlist', 'clid', clid, {cid: this.config.IDLE_CHANNEL});
             } else if (this.idleTimers[clid]) {
+                Log(`Client ${clid} no longer idle.`, this.constructor.name, 4);
                 clearTimeout(this.idleTimers[clid]);
                 this.idleTimers[client.clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - client.client_idle_time, 0), clid);
             }
