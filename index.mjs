@@ -15,7 +15,8 @@ export default class IdleCheck extends Plugin {
         this.moveClient = this.moveClient.bind(this);
     }
     async init() {
-        await this.loadConfig((path.dirname(import.meta.url) + '/config.json'));
+        await this.loadConfig(path.dirname(
+            import.meta.url) + '/config.json');
         this.registerEvents();
         const clientList = await this.connection.store.fetchList('clientlist', true);
         for (let client of clientList) {
@@ -34,25 +35,29 @@ export default class IdleCheck extends Plugin {
     }
     registerEvents() {
         this.connection.registerEvent('server', undefined, {
-            notifyclientleftview: (param) => {
-                this.clearIdleTimer(param.clid);
-            },
-            notifycliententerview: (param) => {
-                clearTimeout(this.idleTimers[param.clid]);
-                this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
-            }
-        }, import.meta.url);
-        this.connection.registerEvent('channel', {id: this.config.IDLE_CHANNEL}, {
-            notifyclientmoved: (param) => {
-                Log(`Client ${param.clid} moved to channel ${param.ctid}`, this.constructor.name, 4);
-                if (param.ctid != this.config.IDLE_CHANNEL) {
+                notifyclientleftview: (param) => {
+                    this.clearIdleTimer(param.clid);
+                },
+                notifycliententerview: (param) => {
                     clearTimeout(this.idleTimers[param.clid]);
                     this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
-                } else {
-                    this.clearIdleTimer(param.clid);
                 }
-            }
-        }, import.meta.url);
+            },
+            import.meta.url);
+        this.connection.registerEvent('channel', {
+                id: this.config.IDLE_CHANNEL
+            }, {
+                notifyclientmoved: (param) => {
+                    Log(`Client ${param.clid} moved to channel ${param.ctid}`, this.constructor.name, 4);
+                    if (param.ctid != this.config.IDLE_CHANNEL) {
+                        clearTimeout(this.idleTimers[param.clid]);
+                        this.idleTimers[param.clid] = setTimeout(this.moveClient, this.config.IDLE_TIME, param.clid);
+                    } else {
+                        this.clearIdleTimer(param.clid);
+                    }
+                }
+            },
+            import.meta.url);
     }
     clearIdleTimer(clid) {
         clearTimeout(this.idleTimers[clid]);
@@ -65,10 +70,17 @@ export default class IdleCheck extends Plugin {
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
                 if (client.cid != this.config.IDLE_CHANNEL) {
-                    this.connection.send('clientmove', {clid, cid: this.config.IDLE_CHANNEL});
+                    this.connection.send('clientmove', {
+                        clid,
+                        cid: this.config.IDLE_CHANNEL
+                    });
                 }
-                this.connection.store.forceInfoUpdate('clientinfo', clid, {client_idle_time: 0});
-                this.connection.store.forceListUpdate('clientlist', 'clid', clid, {cid: this.config.IDLE_CHANNEL});
+                this.connection.store.forceInfoUpdate('clientinfo', clid, {
+                    client_idle_time: 0
+                });
+                this.connection.store.forceListUpdate('clientlist', 'clid', clid, {
+                    cid: this.config.IDLE_CHANNEL
+                });
             } else if (this.idleTimers[clid]) {
                 Log(`Client ${clid} no longer idle.`, this.constructor.name, 4);
                 clearTimeout(this.idleTimers[clid]);
@@ -84,8 +96,10 @@ export default class IdleCheck extends Plugin {
     unload() {
         Log("IdleCheck - Unloading...", this.constructor.name);
         if (this.connection) {
-            this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'], import.meta.url);
-            this.connection.unregisterEvent('channel', ['notifyclientmoved'], import.meta.url);
+            this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'],
+                import.meta.url);
+            this.connection.unregisterEvent('channel', ['notifyclientmoved'],
+                import.meta.url);
         }
 
         for (let clid of Object.keys(this.idleTimers)) {
