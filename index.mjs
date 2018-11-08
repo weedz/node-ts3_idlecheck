@@ -72,7 +72,7 @@ export default class IdleCheck extends Plugin {
             } else if (this.idleTimers[clid]) {
                 Log(`Client ${clid} no longer idle.`, this.constructor.name, 4);
                 clearTimeout(this.idleTimers[clid]);
-                this.idleTimers[client.clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - client.client_idle_time, 0), clid);
+                this.idleTimers[clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - client.client_idle_time, 0), clid);
             }
         }).catch(err => {
             this.clearIdleTimer(clid);
