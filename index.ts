@@ -1,6 +1,6 @@
-import path from 'path';
+import * as path from 'path';
 import Plugin from '../../lib/Plugin'
-import Log from '../../lib/Log.mjs';
+import Log from '../../lib/Log';
 
 const defaultConfig = {
     "IDLE_TIME": 900000,
@@ -9,14 +9,15 @@ const defaultConfig = {
 
 export const VERSION = 1;
 export default class IdleCheck extends Plugin {
+    idleTimers: { [clid: number] : NodeJS.Timeout };
+
     constructor() {
         super(defaultConfig);
         this.idleTimers = {};
         this.moveClient = this.moveClient.bind(this);
     }
     async init() {
-        await this.loadConfig(path.dirname(
-            import.meta.url) + '/config.json');
+        await this.loadConfig(path.resolve(__dirname, "config.json"));
         this.registerEvents();
         const clientList = await this.connection.store.fetchList('clientlist', true);
         for (let client of clientList) {
@@ -35,14 +36,14 @@ export default class IdleCheck extends Plugin {
     }
     registerEvents() {
         this.connection.registerEvent('server', undefined, {
-                notifyclientleftview: (param) => {
+                notifyclientleftview: (param: TSClient) => {
                     this.clearIdleTimer(param.clid);
                 },
-                notifycliententerview: (param) => {
+                notifycliententerview: (param: TSClient) => {
                     this.resetIdleTimer(param.clid);
                 }
             },
-            import.meta.url);
+            this.constructor.name);
         this.connection.registerEvent('channel', {
                 id: this.config.IDLE_CHANNEL
             }, {
@@ -55,17 +56,17 @@ export default class IdleCheck extends Plugin {
                     }
                 }
             },
-            import.meta.url);
+            this.constructor.name);
     }
-    clearIdleTimer(clid) {
+    clearIdleTimer(clid: number) {
         clearTimeout(this.idleTimers[clid]);
         delete this.idleTimers[clid];
     }
-    resetIdleTimer(clid, time = 0) {
+    resetIdleTimer(clid: number, time = 0) {
         clearTimeout(this.idleTimers[clid]);
         this.idleTimers[clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - time, 0), clid);
     }
-    moveClient(clid) {
+    moveClient(clid: number) {
         this.connection.store.fetchInfo('clientinfo', 'clid', clid, true).then(client => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
@@ -88,6 +89,7 @@ export default class IdleCheck extends Plugin {
                 this.resetIdleTimer(clid, client.client_idle_time);
             }
         }).catch(err => {
+            Log(`Error moving client ${clid}: ${err}`, this.constructor.name, 1);
             this.clearIdleTimer(clid);
         });
     }
@@ -98,13 +100,13 @@ export default class IdleCheck extends Plugin {
         Log("IdleCheck - Unloading...", this.constructor.name);
         if (this.connection) {
             this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'],
-                import.meta.url);
+                this.constructor.name);
             this.connection.unregisterEvent('channel', ['notifyclientmoved'],
-                import.meta.url);
+                this.constructor.name);
         }
 
         for (let clid of Object.keys(this.idleTimers)) {
-            this.clearIdleTimer(clid);
+            this.clearIdleTimer(parseInt(clid, 10));
         }
     }
     disconnected() {
