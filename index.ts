@@ -21,17 +21,18 @@ export default class IdleCheck extends Plugin {
         this.registerEvents();
         const clientList = await this.connection.store.fetchList('clientlist', true);
         for (let client of clientList) {
-            const data = await this.connection.store.fetchInfo('clientinfo', 'clid', client.clid);
-            if (
-                !this.idleTimers[client.clid] &&
-                client.cid != this.config.IDLE_CHANNEL
-            ) {
-                const timeRemaining = Math.max(this.config.IDLE_TIME - data.client_idle_time, 0);
-                Log(`Client: ${client.clid}, time: ${timeRemaining}`, this.constructor.name, 5);
-                this.idleTimers[client.clid] = setTimeout(this.moveClient, timeRemaining, client.clid);
-            } else if (this.idleTimers[client.clid]) {
-                this.clearIdleTimer(client.clid);
-            }
+            this.connection.store.fetchInfo('clientinfo', 'clid', client.clid).then(data => {
+                if (
+                    !this.idleTimers[client.clid] &&
+                    client.cid != this.config.IDLE_CHANNEL
+                ) {
+                    const timeRemaining = Math.max(this.config.IDLE_TIME - data.client_idle_time, 0);
+                    Log(`Client: ${client.clid}, time: ${timeRemaining}`, this.constructor.name, 5);
+                    this.idleTimers[client.clid] = setTimeout(this.moveClient, timeRemaining, client.clid);
+                } else if (this.idleTimers[client.clid]) {
+                    this.clearIdleTimer(client.clid);
+                }
+            });
         }
     }
     registerEvents() {
@@ -86,7 +87,7 @@ export default class IdleCheck extends Plugin {
                 });
             } else if (this.idleTimers[clid]) {
                 Log(`Client ${clid} not idle, resetting timer`, this.constructor.name, 4);
-                this.resetIdleTimer(clid, client.client_idle_time);
+                this.resetIdleTimer(clid, client.client_idle_time - 1000);
             }
         }).catch(err => {
             Log(`Error moving client ${clid}: ${err}`, this.constructor.name, 1);
