@@ -1,8 +1,14 @@
+/// <reference path="../../lib/Types/Events.d.ts" />
 import * as path from 'path';
 import Plugin from '../../lib/Plugin'
 import Log from '../../lib/Log';
 
-const defaultConfig = {
+type PluginConfig = {
+    IDLE_TIME: number,
+    IDLE_CHANNEL: number
+};
+
+const defaultConfig: PluginConfig = {
     "IDLE_TIME": 900000,
     "IDLE_CHANNEL": 1
 }
@@ -10,6 +16,7 @@ const defaultConfig = {
 export const VERSION = 1;
 export default class IdleCheck extends Plugin {
     idleTimers: { [clid: number] : NodeJS.Timeout };
+    config: PluginConfig;
 
     constructor() {
         super(defaultConfig);
@@ -19,9 +26,13 @@ export default class IdleCheck extends Plugin {
     async init() {
         await this.loadConfig(path.resolve(__dirname, "config.json"));
         this.registerEvents();
-        const clientList = await this.connection.store.fetchList('clientlist', true);
+        const clientList: TS_ClientList = await this.connection.store.fetchList('clientlist', true);
         for (let client of clientList) {
-            this.connection.store.fetchInfo('clientinfo', 'clid', client.clid).then(data => {
+            // Skip the bot itself
+            if (client.clid === this.client.getSelf().client_id) {
+                continue;
+            }
+            this.connection.store.fetchInfo('clientinfo', 'clid', client.clid).then( (data: TS_ClientInfo) => {
                 if (
                     !this.idleTimers[client.clid] &&
                     client.cid != this.config.IDLE_CHANNEL
@@ -37,10 +48,10 @@ export default class IdleCheck extends Plugin {
     }
     registerEvents() {
         this.connection.registerEvent('server', undefined, {
-                notifyclientleftview: (param: TSClient) => {
+                notifyclientleftview: (param: TSEvent_ClientLeftView) => {
                     this.clearIdleTimer(param.clid);
                 },
-                notifycliententerview: (param: TSClient) => {
+                notifycliententerview: (param: TSEvent_ClientEnterView) => {
                     this.resetIdleTimer(param.clid);
                 }
             },
@@ -48,7 +59,7 @@ export default class IdleCheck extends Plugin {
         this.connection.registerEvent('channel', {
                 id: this.config.IDLE_CHANNEL
             }, {
-                notifyclientmoved: (param) => {
+                notifyclientmoved: (param: TSEvent_ClientMoved) => {
                     Log(`Client ${param.clid} joined channel ${param.ctid}`, this.constructor.name, 4);
                     if (param.ctid != this.config.IDLE_CHANNEL) {
                         this.resetIdleTimer(param.clid);
@@ -68,7 +79,7 @@ export default class IdleCheck extends Plugin {
         this.idleTimers[clid] = setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - time, 0), clid);
     }
     moveClient(clid: number) {
-        this.connection.store.fetchInfo('clientinfo', 'clid', clid, true).then(client => {
+        this.connection.store.fetchInfo('clientinfo', 'clid', clid, true).then( (client: TS_ClientInfo) => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
