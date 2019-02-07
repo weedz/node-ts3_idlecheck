@@ -1,4 +1,5 @@
 /// <reference path="../../lib/Types/Events.d.ts" />
+/// <reference path="../../lib/Types/TeamSpeak.d.ts" />
 import * as path from 'path';
 import Plugin, { loadConfig, mergeConfig } from '../../lib/Plugin'
 import Log from '../../lib/Log';
@@ -32,13 +33,13 @@ export default class IdleCheck extends Plugin {
     async _init() {
         this.config = mergeConfig(this.config, await loadConfig(path.resolve(__dirname, "config.json")));
         this.registerEvents();
-        const clientList = await this.connection.store.fetchList<TS_ClientList>("clientlist");
+        const clientList = await this.connection.store.fetchList("clientlist");
         for (let client of clientList) {
             // Skip the bot itself
             if (client.clid === this.client.getSelf().client_id) {
                 continue;
             }
-            this.connection.store.fetchItem<TS_ClientInfo>("clientinfo", client.clid).then(data => {
+            this.connection.store.fetchItem("clientinfo", client.clid).then(data => {
                 if (
                     !this.idleTimers[client.clid] &&
                     client.cid != this.config.IDLE_CHANNEL
@@ -87,7 +88,7 @@ export default class IdleCheck extends Plugin {
         this.idleTimers[clid] = <any>setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - time, 0), clid);
     }
     moveClient(clid: number) {
-        this.connection.store.fetchItem<TS_ClientInfo>("clientinfo", clid).then(client => {
+        this.connection.store.fetchItem("clientinfo", clid).then(client => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
