@@ -95,7 +95,9 @@ export default class IdleCheck extends Plugin {
                 if (client.cid != this.config.IDLE_CHANNEL) {
                     Log(`Moving client ${clid} to channel ${this.config.IDLE_CHANNEL}`, this.constructor.name, 4);
                     this.connection.send("clientmove", {
-                        clid,
+                        clients: [
+                            {clid}
+                        ],
                         cid: this.config.IDLE_CHANNEL
                     });
                 }
