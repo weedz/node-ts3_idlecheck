@@ -16,12 +16,11 @@ const defaultConfig: PluginConfig = {
     "IDLE_CHANNEL": 1
 }
 
-export const VERSION = 1;
 export default class IdleCheck extends Plugin {
     idleTimers: { [clid: number] : NodeJS.Timer };
     config: PluginConfig;
 
-    constructor(connection: Connection, client: Client) {
+    constructor({ connection, client }: { connection: Connection, client: Client}) {
         super(connection, client);
         this.config = defaultConfig;
         this.idleTimers = {};
@@ -101,12 +100,12 @@ export default class IdleCheck extends Plugin {
                         cid: this.config.IDLE_CHANNEL
                     });
                 }
-                // this.connection.store.forceUpdateItem("clientinfo", clid, {
-                //     client_idle_time: 0
-                // });
-                // this.connection.store.forceUpdateList("clientlist", clid, {
-                //     cid: this.config.IDLE_CHANNEL
-                // });
+                this.connection.store.forceUpdateItem("clientinfo", clid, {
+                    client_idle_time: 0
+                });
+                this.connection.store.forceUpdateList("clientlist", clid, {
+                    cid: this.config.IDLE_CHANNEL
+                });
             } else if (this.idleTimers[clid]) {
                 Log(`Client ${clid} not idle, resetting timer`, this.constructor.name, 4);
                 this.resetIdleTimer(clid, client.client_idle_time - 1000);
