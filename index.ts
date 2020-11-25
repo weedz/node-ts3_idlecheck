@@ -1,10 +1,8 @@
-/// <reference path="../../lib/Types/Events.d.ts" />
-/// <reference path="../../lib/Types/TeamSpeak.d.ts" />
 import * as path from 'path';
 import Plugin, { loadConfig, mergeConfig } from '../../lib/Plugin'
 import Log from '../../lib/Log';
-import Connection from '../../lib/Connection';
-import Client from '../../lib/Client';
+import { TSEvent_ClientLeftView, TSEvent_ClientEnterView, TSEvent_ClientMoved } from '../../lib/Types/Events';
+import { ValidEvents } from '../../lib/Connection/valid_events';
 
 interface PluginConfig {
     IDLE_TIME: number,
@@ -17,20 +15,11 @@ const defaultConfig: PluginConfig = {
 }
 
 export default class IdleCheck extends Plugin {
-    idleTimers: { [clid: number] : NodeJS.Timer };
-    config: PluginConfig;
+    idleTimers: { [clid: number] : NodeJS.Timer } = {};
+    config!: PluginConfig;
 
-    constructor({ connection, client }: { connection: Connection, client: Client}) {
-        super(connection, client);
-        this.config = defaultConfig;
-        this.idleTimers = {};
-        this.moveClient = this.moveClient.bind(this);
-    }
-    init = () => {
-        this._init();
-    }
-    async _init() {
-        this.config = mergeConfig(this.config, await loadConfig(path.resolve(__dirname, "config.json")));
+    async init() {
+        this.config = mergeConfig(defaultConfig, await loadConfig(path.resolve(__dirname, "config.json")));
         this.registerEvents();
         const clientList = await this.connection.store.fetchList("clientlist");
         for (let client of clientList) {
@@ -38,7 +27,7 @@ export default class IdleCheck extends Plugin {
             if (client.clid === this.client.getSelf().client_id) {
                 continue;
             }
-            this.connection.store.fetchItem("clientinfo", client.clid).then(data => {
+            this.connection.store.fetchItem("clientinfo", client.clid).then((data: any) => {
                 if (
                     !this.idleTimers[client.clid] &&
                     client.cid != this.config.IDLE_CHANNEL
@@ -53,7 +42,7 @@ export default class IdleCheck extends Plugin {
         }
     }
     registerEvents() {
-        this.connection.registerEvent("server", null, {
+        this.connection.registerEvent(ValidEvents.server, null, {
                 notifyclientleftview: (param: TSEvent_ClientLeftView) => {
                     Log(`Client ${param.clid} disconnected, reason: (${param.reasonid}) ${param.reasonmsg}`, this.constructor.name, 4);
                     this.clearIdleTimer(param.clid);
@@ -64,7 +53,7 @@ export default class IdleCheck extends Plugin {
                 }
             },
             this.constructor.name);
-        this.connection.registerEvent("channel", {
+        this.connection.registerEvent(ValidEvents.channel, {
                 id: this.config.IDLE_CHANNEL
             }, {
                 notifyclientmoved: (param: TSEvent_ClientMoved) => {
@@ -86,8 +75,8 @@ export default class IdleCheck extends Plugin {
         clearTimeout(this.idleTimers[clid]);
         this.idleTimers[clid] = <any>setTimeout(this.moveClient, Math.max(this.config.IDLE_TIME - time, 0), clid);
     }
-    moveClient(clid: number) {
-        this.connection.store.fetchItem("clientinfo", clid).then(client => {
+    moveClient = (clid: number) => {
+        this.connection.store.fetchItem("clientinfo", clid).then((client: any) => {
             if (
                 client.client_idle_time > this.config.IDLE_TIME
             ) {
@@ -115,15 +104,15 @@ export default class IdleCheck extends Plugin {
             this.clearIdleTimer(clid);
         });
     }
-    reload = () => {
+    reload() {
         Log("IdleCheck - Already loaded!", this.constructor.name, 4);
     }
-    unload = () => {
+    unload() {
         Log("IdleCheck - Unloading...", this.constructor.name);
         if (this.connection) {
-            this.connection.unregisterEvent('server', ['notifyclientleftview', 'notifycliententerview'],
+            this.connection.unregisterEvent(ValidEvents.server, ["notifyclientleftview", "notifycliententerview"],
                 this.constructor.name);
-            this.connection.unregisterEvent('channel', ['notifyclientmoved'],
+            this.connection.unregisterEvent(ValidEvents.channel, ["notifyclientmoved"],
                 this.constructor.name);
         }
 
@@ -131,7 +120,7 @@ export default class IdleCheck extends Plugin {
             this.clearIdleTimer(parseInt(clid, 10));
         }
     }
-    disconnected = () => {
+    disconnected() {
         this.unload();
     }
 }
