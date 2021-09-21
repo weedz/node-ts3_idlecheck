@@ -1,4 +1,3 @@
-import * as path from 'path';
 import Plugin, { loadConfig, mergeConfig } from '../../lib/Plugin'
 import Log from '../../lib/Log';
 import { TSEvent_ClientLeftView, TSEvent_ClientEnterView, TSEvent_ClientMoved } from '../../lib/Types/Events';
@@ -16,10 +15,10 @@ const defaultConfig: PluginConfig = {
 
 export default class IdleCheck extends Plugin {
     idleTimers: { [clid: number] : NodeJS.Timer } = {};
-    config!: PluginConfig;
 
     async init() {
-        this.config = mergeConfig(defaultConfig, await loadConfig(path.resolve(__dirname, "config.json")));
+        const configPath = new URL("config.json", import.meta.url).pathname;
+        this.config = mergeConfig(defaultConfig, await loadConfig(configPath));
         this.registerEvents();
         const clientList = await this.connection.store.fetchList("clientlist");
         for (let client of clientList) {
